@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block titulo %}Ficha · {{ produto.nome }}{% endblock %}
+{% block cabecalho %}{{ produto.nome }}{% endblock %}
+{% block subtitulo %}Ficha técnica{% endblock %}
+
+{% block conteudo %}
+
+<div class="kpis">
+  <div class="kpi">
+    <div class="v" style="font-size:20px">{{ produto.custo_ficha|moeda }}</div>
+    <div class="r">custo dos insumos</div>
+  </div>
+  <div class="kpi">
+    <div class="v" style="font-size:20px">{{ produto.preco_venda|moeda }}</div>
+    <div class="r">preço de venda</div>
+  </div>
+  <div class="kpi">
+    <div class="v">{% if produto.margem is not none %}{{ produto.margem|num(1) }}%{% else %}—{% endif %}</div>
+    <div class="r">margem</div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Insumos consumidos por unidade vendida</h2>
+  {% if produto.ficha %}
+  <div class="tabela-rolavel">
+  <table>
+    <thead>
+      <tr><th>Insumo</th><th class="n">Quantidade</th><th class="n">Custo</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for item in produto.ficha %}
+      <tr>
+        <td>{{ item.insumo.nome }}</td>
+        <td class="n">{{ item.quantidade|num(3) }} {{ item.insumo.unidade }}</td>
+        <td class="n suave">{{ (item.quantidade * (item.insumo.custo_unitario or 0))|moeda }}</td>
+        <td style="width:1%">
+          <form method="post" action="{{ url_for('ficha_remover', item_id=item.id) }}">
+            <button type="submit" class="botao sec mini">remover</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <div class="vazio">
+    Nenhum insumo na ficha.<br>
+    Sem ficha técnica o sistema não consegue dar baixa automática nas vendas.
+  </div>
+  {% endif %}
+</div>
+
+<form method="post" class="card">
+  <h2>Adicionar insumo</h2>
+  <div class="campo">
+    <label for="insumo_id">Insumo</label>
+    <select name="insumo_id" id="insumo_id" required>
+      <option value="">Selecione…</option>
+      {% for i in insumos %}
+      <option value="{{ i.id }}">{{ i.nome }} ({{ i.unidade }})</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="campo">
+    <label for="quantidade">Quantidade consumida por unidade vendida</label>
+    <input type="number" step="0.0001" min="0" name="quantidade" id="quantidade"
+           inputmode="decimal" placeholder="0,2500" required>
+  </div>
+  <button type="submit">Adicionar à ficha</button>
+</form>
+
+<a class="botao sec" href="{{ url_for('produtos') }}">Voltar</a>
+
+{% endblock %}

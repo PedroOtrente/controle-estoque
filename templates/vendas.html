@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block titulo %}Vendas · Controle de Estoque{% endblock %}
+{% block cabecalho %}Vendas e baixa automática{% endblock %}
+{% block subtitulo %}Importa o PDV e desconta do estoque{% endblock %}
+
+{% block conteudo %}
+
+<form method="post" enctype="multipart/form-data" class="card">
+  <h2>Importar relatório do PDV</h2>
+  <div class="campo">
+    <label for="arquivo">Arquivo CSV</label>
+    <input type="file" name="arquivo" id="arquivo" accept=".csv,text/csv" required>
+  </div>
+  <p class="suave" style="margin:0 0 12px">
+    Colunas reconhecidas: <strong>codigo</strong>, <strong>produto</strong>,
+    <strong>quantidade</strong>, <strong>valor</strong>, <strong>data</strong>.
+    Cada linha é cruzada com a ficha técnica e dá baixa nos insumos.
+  </p>
+  <button type="submit">Importar e baixar estoque</button>
+</form>
+
+<div class="card">
+  <h2>Lançamentos recentes</h2>
+  {% if lancamentos %}
+  <div class="tabela-rolavel">
+  <table>
+    <thead>
+      <tr><th>Data</th><th>Produto</th><th class="n">Qtd</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      {% for l in lancamentos %}
+      <tr>
+        <td class="suave">{{ l.data_venda|datahora }}</td>
+        <td>
+          {{ l.produto_descricao }}
+          {% if l.erro %}<div class="suave">{{ l.erro }}</div>{% endif %}
+        </td>
+        <td class="n">{{ l.quantidade|num(0) }}</td>
+        <td>
+          {% if l.processado %}
+            <span class="tag ok">baixado</span>
+          {% else %}
+            <span class="tag critico">pendente</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <div class="vazio">Nenhuma venda importada ainda.</div>
+  {% endif %}
+</div>
+
+{% endblock %}

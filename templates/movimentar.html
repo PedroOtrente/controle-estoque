@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block titulo %}Movimentar · Controle de Estoque{% endblock %}
+{% block cabecalho %}Movimentar estoque{% endblock %}
+{% block subtitulo %}Entrada, perda e ajuste{% endblock %}
+
+{% block conteudo %}
+
+<form method="post" class="card">
+  <div class="seg">
+    <input type="radio" name="tipo" id="t-entrada" value="ENTRADA" checked>
+    <label for="t-entrada">Entrada</label>
+    <input type="radio" name="tipo" id="t-perda" value="PERDA">
+    <label for="t-perda">Perda</label>
+  </div>
+
+  <div class="campo">
+    <label for="insumo_id">Insumo</label>
+    <select name="insumo_id" id="insumo_id" required>
+      <option value="">Selecione…</option>
+      {% for i in itens %}
+      <option value="{{ i.id }}">{{ i.nome }} — {{ i.estoque_atual|num(2) }} {{ i.unidade }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="linha">
+    <div class="campo">
+      <label for="quantidade">Quantidade</label>
+      <input type="number" step="0.001" min="0" name="quantidade" id="quantidade"
+             inputmode="decimal" placeholder="0,000" required>
+    </div>
+    <div class="campo">
+      <label for="usuario">Quem registrou</label>
+      <input type="text" name="usuario" id="usuario" placeholder="seu nome">
+    </div>
+  </div>
+
+  <div class="campo">
+    <label for="observacao">Observação (opcional)</label>
+    <input type="text" name="observacao" id="observacao"
+           placeholder="nota fiscal, fornecedor, motivo da perda…">
+  </div>
+
+  <button type="submit">Registrar</button>
+</form>
+
+<div class="card">
+  <h2>Registros recentes</h2>
+  {% if recentes %}
+  <div class="tabela-rolavel">
+  <table>
+    <thead><tr><th>Quando</th><th>Insumo</th><th>Tipo</th><th class="n">Qtd</th></tr></thead>
+    <tbody>
+      {% for m in recentes %}
+      <tr>
+        <td class="suave">{{ m.criado_em|datahora }}</td>
+        <td>{{ m.insumo.nome }}</td>
+        <td><span class="tag {{ 'ok' if m.tipo == 'ENTRADA' else ('critico' if m.tipo == 'PERDA' else 'atencao') }}">{{ m.tipo|lower }}</span></td>
+        <td class="n">{{ m.quantidade|num(2) }} {{ m.insumo.unidade }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <div class="vazio">Nada registrado ainda.</div>
+  {% endif %}
+</div>
+
+<a class="botao sec" href="{{ url_for('contagem') }}">Fazer contagem de inventário</a>
+
+{% endblock %}

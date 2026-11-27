@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block titulo %}Escala · {{ nome_mes }} {{ ano }}{% endblock %}
+{% block cabecalho %}Escala de trabalho{% endblock %}
+{% block subtitulo %}{{ nome_mes }} de {{ ano }} · {{ funcionarios|length }} pessoa(s){% endblock %}
+
+{% block conteudo %}
+<style>
+  .grade td,.grade th{padding:6px 4px; text-align:center; font-size:12px}
+  .grade td:first-child,.grade th:first-child{text-align:left; white-space:nowrap; padding-right:10px;
+     position:sticky; left:0; background:var(--surface); z-index:1}
+  .grade .F{background:var(--atencao-fraca); color:var(--atencao); font-weight:700}
+  .grade .fds{background:var(--bg)}
+  .grade .baixo{color:var(--alerta); font-weight:700}
+</style>
+
+<form method="get" class="card">
+  <div class="linha">
+    <div class="campo">
+      <label for="mes">Mês</label>
+      <select name="mes" id="mes">
+        {% for m in range(1,13) %}<option value="{{ m }}" {{ 'selected' if m == mes }}>{{ m }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="campo">
+      <label for="ano">Ano</label>
+      <input type="number" name="ano" id="ano" value="{{ ano }}">
+    </div>
+  </div>
+  <div class="campo">
+    <label for="domingo">Domingo de folga a cada (semanas)</label>
+    <input type="number" name="domingo" id="domingo" min="1" max="7" value="{{ intervalo }}">
+  </div>
+  <button type="submit">Gerar escala</button>
+</form>
+
+{% if resultado %}
+{% set dias, grade, cobertura, alertas = resultado %}
+
+{% if alertas %}
+<div class="flash erro">
+  <strong>{{ alertas|length }} dia(s) abaixo do mínimo.</strong>
+  Contrate, remaneje ou reduza o mínimo do setor.
+  <div class="suave" style="margin-top:6px">{{ alertas[:6]|join(' · ') }}{% if alertas|length > 6 %} …{% endif %}</div>
+</div>
+{% else %}
+<div class="flash ok">Todos os dias atendem o mínimo de cada setor.</div>
+{% endif %}
+
+<div class="card">
+  <h2>Escala</h2>
+  <div class="tabela-rolavel">
+  <table class="grade">
+    <thead>
+      <tr><th>Funcionário</th>
+        {% for d in dias %}<th>{{ d.day }}<br><span class="suave">{{ dias_semana[d.weekday()][0] }}</span></th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for f in funcionarios %}
+      <tr>
+        <td>{{ f.nome }} <span class="suave">· {{ f.setor }}</span></td>
+        {% for d in dias %}
+          {% set v = grade[f.id].get(d, '') %}
+          <td class="{{ v }} {{ 'fds' if d.weekday() >= 5 and v == 'T' }}">{{ v }}</td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+      {% for s in setores %}
+      <tr>
+        <td><strong>{{ s }}</strong> <span class="suave">trabalhando</span></td>
+        {% for d in dias %}
+          {% set n = cobertura[d].get(s, 0) %}
+          {% set m = minimos.get(s) %}
+          {% set req = (m.minimo_fds if d.weekday() >= 5 else m.minimo_semana) if m else 0 %}
+          <td class="{{ 'baixo' if n < req }}">{{ n }}</td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <div style="margin-top:12px">
+    <a class="botao" href="{{ url_for('escala.exportar', mes=mes, ano=ano, domingo=intervalo) }}">Baixar em Excel</a>
+  </div>
+</div>
+{% endif %}
+
+<form method="post" action="{{ url_for('escala.minimos_salvar') }}" class="card">
+  <h2>Mínimo de pessoas por setor</h2>
+  {% if minimos %}
+  <table>
+    <thead><tr><th>Setor</th><th class="n">Seg a sex</th><th class="n">Sáb e dom</th></tr></thead>
+    <tbody>
+      {% for s, m in minimos|dictsort %}
+      <tr>
+        <td>{{ s }}</td>
+        <td><input type="number" min="0" name="sem_{{ m.id }}" value="{{ m.minimo_semana }}" style="padding:8px"></td>
+        <td><input type="number" min="0" name="fds_{{ m.id }}" value="{{ m.minimo_fds }}" style="padding:8px"></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <div style="margin-top:12px"><button type="submit">Salvar mínimos</button></div>
+  {% else %}
+  <div class="vazio">Os setores aparecem aqui quando você cadastra a equipe.</div>
+  {% endif %}
+</form>
+
+<div class="card">
+  <h2>Equipe</h2>
+  {% if funcionarios %}
+  <table>
+    <tbody>
+      {% for f in funcionarios %}
+      <tr>
+        <td><strong>{{ f.nome }}</strong>
+          <div class="suave">{{ f.setor }}{% if f.turno %} · {{ f.turno }}{% endif %}
+          · folga {{ dias_semana[f.folga_fixa] if f.folga_fixa is not none else 'rotativa' }}</div></td>
+        <td style="width:1%">
+          <form method="post" action="{{ url_for('escala.funcionario_remover', fid=f.id) }}">
+            <button class="botao sec mini">remover</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="vazio">Nenhum funcionário cadastrado.</div>
+  {% endif %}
+</div>
+
+<form method="post" action="{{ url_for('escala.funcionario_novo') }}" class="card">
+  <h2>Adicionar funcionário</h2>
+  <div class="campo"><label for="nome">Nome</label><input name="nome" id="nome" required></div>
+  <div class="linha">
+    <div class="campo">
+      <label for="setor">Setor</label>
+      <input name="setor" id="setor" list="setores" placeholder="Salão">
+      <datalist id="setores"><option>Salão</option><option>Cozinha</option><option>Bar</option><option>Caixa</option><option>Estoque</option></datalist>
+    </div>
+    <div class="campo"><label for="turno">Turno</label><input name="turno" id="turno" placeholder="16h–22h"></div>
+  </div>
+  <div class="campo">
+    <label for="folga_fixa">Folga</label>
+    <select name="folga_fixa" id="folga_fixa">
+      <option value="">Rotativa (o sistema escolhe)</option>
+      {% for d in dias_semana %}<option value="{{ loop.index0 }}">Fixa: {{ d }}</option>{% endfor %}
+    </select>
+  </div>
+  <button type="submit">Adicionar</button>
+</form>
+{% endblock %}

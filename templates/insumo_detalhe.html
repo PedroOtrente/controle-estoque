@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block titulo %}{{ insumo.nome }} · Controle de Estoque{% endblock %}
+{% block cabecalho %}{{ insumo.nome }}{% endblock %}
+{% block subtitulo %}{{ insumo.categoria }}{% endblock %}
+
+{% block conteudo %}
+
+<div class="kpis">
+  <div class="kpi {{ 'alerta' if insumo.abaixo_minimo }}">
+    <div class="v">{{ insumo.estoque_atual|num(2) }}</div>
+    <div class="r">{{ insumo.unidade }} em estoque</div>
+  </div>
+  <div class="kpi">
+    <div class="v">{{ insumo.estoque_minimo|num(2) }}</div>
+    <div class="r">mínimo definido</div>
+  </div>
+  <div class="kpi">
+    <div class="v" style="font-size:20px">{{ ((insumo.estoque_atual or 0) * (insumo.custo_unitario or 0))|moeda }}</div>
+    <div class="r">valor parado</div>
+  </div>
+</div>
+
+<form method="post" action="{{ url_for('insumo_editar', insumo_id=insumo.id) }}" class="card">
+  <h2>Parâmetros</h2>
+  <div class="linha">
+    <div class="campo">
+      <label for="estoque_minimo">Estoque mínimo ({{ insumo.unidade }})</label>
+      <input type="number" step="0.001" min="0" name="estoque_minimo"
+             id="estoque_minimo" value="{{ insumo.estoque_minimo }}" inputmode="decimal">
+    </div>
+    <div class="campo">
+      <label for="custo_unitario">Custo por {{ insumo.unidade }} (R$)</label>
+      <input type="number" step="0.01" min="0" name="custo_unitario"
+             id="custo_unitario" value="{{ insumo.custo_unitario }}" inputmode="decimal">
+    </div>
+  </div>
+  <button type="submit">Salvar</button>
+</form>
+
+<div class="card">
+  <h2>Histórico de movimentações</h2>
+  {% if movs %}
+  <div class="tabela-rolavel">
+  <table>
+    <thead>
+      <tr><th>Quando</th><th>Tipo</th><th class="n">Qtd</th><th class="n">Saldo</th><th>Observação</th></tr>
+    </thead>
+    <tbody>
+      {% for m in movs %}
+      <tr>
+        <td class="suave">{{ m.criado_em|datahora }}</td>
+        <td><span class="tag {{ 'ok' if m.tipo == 'ENTRADA' else ('critico' if m.tipo == 'PERDA' else 'atencao') }}">{{ m.tipo|lower }}</span></td>
+        <td class="n">{{ m.quantidade|num(3) }}</td>
+        <td class="n suave">{{ m.saldo_apos|num(3) }}</td>
+        <td class="suave">{{ m.observacao or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <div class="vazio">Sem movimentações.</div>
+  {% endif %}
+</div>
+
+<a class="botao sec" href="{{ url_for('insumos') }}">Voltar</a>
+
+{% endblock %}

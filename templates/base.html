@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{% block titulo %}Controle de Estoque{% endblock %}</title>
+<style>
+  :root{
+    --bg:#f6f7f5; --surface:#fff; --linha:#e3e5e0; --texto:#1c1f1a;
+    --suave:#6b7065; --marca:#1f6b4a; --marca-fraca:#e8f2ec;
+    --alerta:#b3261e; --alerta-fraca:#fdecea; --atencao:#8a5a00; --atencao-fraca:#fdf3e0;
+    --raio:12px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#14161a; --surface:#1c1f24; --linha:#2c3038; --texto:#e8eae6;
+      --suave:#9aa09a; --marca:#53b88a; --marca-fraca:#18312a;
+      --alerta:#f2857c; --alerta-fraca:#331d1c; --atencao:#e0b057; --atencao-fraca:#30271a;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#14161a; --surface:#1c1f24; --linha:#2c3038; --texto:#e8eae6;
+    --suave:#9aa09a; --marca:#53b88a; --marca-fraca:#18312a;
+    --alerta:#f2857c; --alerta-fraca:#331d1c; --atencao:#e0b057; --atencao-fraca:#30271a;
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--texto);
+    font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    padding-bottom:84px;
+  }
+  header{
+    background:var(--surface); border-bottom:1px solid var(--linha);
+    padding:14px 16px; position:sticky; top:0; z-index:20;
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+  }
+  header h1{font-size:17px; margin:0; font-weight:650; letter-spacing:-.01em}
+  header .sub{font-size:12px; color:var(--suave); font-weight:400}
+  main{max-width:960px; margin:0 auto; padding:16px}
+
+  nav.tabs{
+    position:fixed; bottom:0; left:0; right:0; z-index:30;
+    background:var(--surface); border-top:1px solid var(--linha);
+    display:flex; padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+  }
+  nav.tabs a{
+    flex:1; text-align:center; text-decoration:none; color:var(--suave);
+    font-size:11px; padding:6px 2px; border-radius:8px; line-height:1.3;
+  }
+  nav.tabs a .ic{display:block; font-size:19px; margin-bottom:1px}
+  nav.tabs a.on{color:var(--marca); background:var(--marca-fraca); font-weight:600}
+
+  .card{
+    background:var(--surface); border:1px solid var(--linha);
+    border-radius:var(--raio); padding:16px; margin-bottom:14px;
+  }
+  .card h2{font-size:14px; margin:0 0 12px; text-transform:uppercase;
+           letter-spacing:.05em; color:var(--suave); font-weight:600}
+
+  .kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:14px}
+  .kpi{background:var(--surface); border:1px solid var(--linha); border-radius:var(--raio); padding:14px}
+  .kpi .v{font-size:26px; font-weight:680; letter-spacing:-.02em; line-height:1.1}
+  .kpi .r{font-size:12px; color:var(--suave); margin-top:3px}
+  .kpi.alerta .v{color:var(--alerta)}
+  .kpi.atencao .v{color:var(--atencao)}
+
+  table{width:100%; border-collapse:collapse; font-size:14px}
+  th{text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.04em;
+     color:var(--suave); padding:0 8px 8px; font-weight:600}
+  td{padding:10px 8px; border-top:1px solid var(--linha); vertical-align:middle}
+  td.n, th.n{text-align:right; font-variant-numeric:tabular-nums}
+  tr.clicavel:hover{background:var(--marca-fraca)}
+  .tabela-rolavel{overflow-x:auto; -webkit-overflow-scrolling:touch}
+
+  .tag{display:inline-block; font-size:11px; font-weight:600; padding:3px 8px;
+       border-radius:99px; white-space:nowrap}
+  .tag.ok{background:var(--marca-fraca); color:var(--marca)}
+  .tag.critico,.tag.zerado{background:var(--alerta-fraca); color:var(--alerta)}
+  .tag.atencao{background:var(--atencao-fraca); color:var(--atencao)}
+
+  label{display:block; font-size:12px; color:var(--suave); margin-bottom:5px; font-weight:500}
+  input,select,textarea{
+    width:100%; padding:11px 12px; font-size:16px; font-family:inherit;
+    border:1px solid var(--linha); border-radius:9px;
+    background:var(--bg); color:var(--texto);
+  }
+  input:focus,select:focus{outline:2px solid var(--marca); outline-offset:-1px}
+  .campo{margin-bottom:12px}
+  .linha{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  @media (max-width:520px){ .linha{grid-template-columns:1fr} }
+
+  button,.botao{
+    display:inline-block; width:100%; padding:13px 16px; font-size:15px; font-weight:600;
+    font-family:inherit; border:0; border-radius:9px; cursor:pointer;
+    background:var(--marca); color:#fff; text-align:center; text-decoration:none;
+  }
+  button:active{opacity:.85}
+  .botao.sec{background:var(--surface); color:var(--texto); border:1px solid var(--linha)}
+  .botao.mini, button.mini{width:auto; padding:7px 12px; font-size:13px}
+
+  .seg{display:flex; gap:8px; margin-bottom:12px}
+  .seg input{position:absolute; opacity:0; pointer-events:none}
+  .seg label{
+    flex:1; margin:0; text-align:center; padding:12px; border-radius:9px; cursor:pointer;
+    border:1px solid var(--linha); background:var(--bg); font-size:14px;
+    font-weight:600; color:var(--suave);
+  }
+  .seg input:checked + label{background:var(--marca); color:#fff; border-color:var(--marca)}
+
+  .flash{padding:12px 14px; border-radius:9px; margin-bottom:14px; font-size:14px}
+  .flash.ok{background:var(--marca-fraca); color:var(--marca)}
+  .flash.erro{background:var(--alerta-fraca); color:var(--alerta)}
+
+  .vazio{text-align:center; padding:32px 16px; color:var(--suave); font-size:14px}
+  .suave{color:var(--suave); font-size:13px}
+  .barra{height:5px; background:var(--linha); border-radius:99px; overflow:hidden; margin-top:5px}
+  .barra i{display:block; height:100%; background:var(--marca); border-radius:99px}
+  .barra i.critico{background:var(--alerta)}
+  .barra i.atencao{background:var(--atencao)}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>{% block cabecalho %}Controle de Estoque{% endblock %}</h1>
+    <div class="sub">{% block subtitulo %}Restaurante Exemplo{% endblock %}</div>
+  </div>
+  {% block acao_topo %}{% endblock %}
+</header>
+
+<main>
+  {% with mensagens = get_flashed_messages(with_categories=true) %}
+    {% for categoria, texto in mensagens %}
+      <div class="flash {{ categoria }}">{{ texto }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {% block conteudo %}{% endblock %}
+</main>
+
+<nav class="tabs">
+  <a href="{{ url_for('painel') }}" class="{{ 'on' if request.endpoint == 'painel' }}">
+    <span class="ic">▣</span>Painel</a>
+  <a href="{{ url_for('movimentar') }}" class="{{ 'on' if request.endpoint == 'movimentar' }}">
+    <span class="ic">⇅</span>Movimentar</a>
+  <a href="{{ url_for('insumos') }}" class="{{ 'on' if request.endpoint in ('insumos','insumo_detalhe') }}">
+    <span class="ic">▤</span>Insumos</a>
+  <a href="{{ url_for('produtos') }}" class="{{ 'on' if request.endpoint in ('produtos','ficha_tecnica') }}">
+    <span class="ic">☰</span>Fichas</a>
+  <a href="{{ url_for('vendas') }}" class="{{ 'on' if request.endpoint == 'vendas' }}">
+    <span class="ic">↧</span>Vendas</a>
+  <a href="{{ url_for('relatorios') }}" class="{{ 'on' if request.endpoint == 'relatorios' }}">
+    <span class="ic">◷</span>Relatórios</a>
+  <a href="{{ url_for('escala.painel') }}" class="{{ 'on' if request.endpoint and request.endpoint.startswith('escala.') }}">
+    <span class="ic">▦</span>Escala</a>
+</nav>
+
+</body>
+</html>

@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block titulo %}Painel · Controle de Estoque{% endblock %}
+{% block cabecalho %}Painel{% endblock %}
+
+{% block conteudo %}
+
+<div class="kpis">
+  <div class="kpi {{ 'alerta' if criticos }}">
+    <div class="v">{{ criticos|length }}</div>
+    <div class="r">abaixo do mínimo</div>
+  </div>
+  <div class="kpi {{ 'atencao' if atencao }}">
+    <div class="v">{{ atencao|length }}</div>
+    <div class="r">perto do mínimo</div>
+  </div>
+  <div class="kpi">
+    <div class="v">{{ insumos|length }}</div>
+    <div class="r">insumos ativos</div>
+  </div>
+  <div class="kpi">
+    <div class="v" style="font-size:20px">{{ valor_estoque|moeda }}</div>
+    <div class="r">valor em estoque</div>
+  </div>
+</div>
+
+{% if criticos %}
+<div class="card">
+  <h2>Repor com urgência</h2>
+  <div class="tabela-rolavel">
+  <table>
+    <thead>
+      <tr><th>Insumo</th><th class="n">Atual</th><th class="n">Mínimo</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for i in criticos %}
+      <tr class="clicavel" onclick="location.href='{{ url_for('insumo_detalhe', insumo_id=i.id) }}'">
+        <td>
+          <strong>{{ i.nome }}</strong>
+          <div class="barra">
+            <i class="critico" style="width:{{ [((i.estoque_atual / i.estoque_minimo * 100) if i.estoque_minimo else 0), 100]|min }}%"></i>
+          </div>
+        </td>
+        <td class="n">{{ i.estoque_atual|num(2) }} {{ i.unidade }}</td>
+        <td class="n suave">{{ i.estoque_minimo|num(2) }}</td>
+        <td><span class="tag {{ i.situacao }}">{{ 'zerado' if i.situacao == 'zerado' else 'repor' }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <div style="margin-top:12px">
+    <a class="botao sec" href="{{ url_for('exportar_reposicao') }}">Baixar lista de compras (CSV)</a>
+  </div>
+</div>
+{% endif %}
+
+{% if consumo %}
+<div class="card">
+  <h2>Maior consumo · últimos 7 dias</h2>
+  <div class="tabela-rolavel">
+  <table>
+    <thead><tr><th>Insumo</th><th class="n">Consumido</th></tr></thead>
+    <tbody>
+      {% for nome, unidade, total in consumo %}
+      <tr>
+        <td>{{ nome }}</td>
+        <td class="n">{{ (total|abs)|num(2) }} {{ unidade }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>Últimas movimentações</h2>
+  {% if ultimas %}
+  <div class="tabela-rolavel">
+  <table>
+    <thead><tr><th>Quando</th><th>Insumo</th><th>Tipo</th><th class="n">Qtd</th><th class="n">Saldo</th></tr></thead>
+    <tbody>
+      {% for m in ultimas %}
+      <tr>
+        <td class="suave">{{ m.criado_em|datahora }}</td>
+        <td>{{ m.insumo.nome }}</td>
+        <td><span class="tag {{ 'ok' if m.tipo == 'ENTRADA' else ('critico' if m.tipo == 'PERDA' else 'atencao') }}">{{ m.tipo|lower }}</span></td>
+        <td class="n">{{ m.quantidade|num(2) }}</td>
+        <td class="n suave">{{ m.saldo_apos|num(2) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <div class="vazio">Nenhuma movimentação registrada ainda.</div>
+  {% endif %}
+</div>
+
+{% endblock %}
